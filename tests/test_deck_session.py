@@ -48,7 +48,7 @@ class DeckSessionTests(unittest.TestCase):
             return type("Result", (), {"stdout": b"png"})()
 
         session = DeckSession(runner=runner)
-        with patch("nrrelics_deck.deck_session.shutil.which", side_effect=lambda tool: "/usr/bin/ffmpeg" if tool == "ffmpeg" else None), patch("nrrelics_deck.deck_session.time.sleep"):
+        with patch.object(DeckSession, "_portal_helper", return_value=None), patch("nrrelics_deck.deck_session.shutil.which", side_effect=lambda tool: "/usr/bin/ffmpeg" if tool == "ffmpeg" else None), patch("nrrelics_deck.deck_session.time.sleep"):
             self.assertEqual(session.capture_bytes(), b"png")
 
         self.assertEqual(len(calls), 2)

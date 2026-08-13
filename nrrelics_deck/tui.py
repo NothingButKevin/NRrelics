@@ -258,7 +258,7 @@ class App:
         from .deck_session import DeckSession
         session = DeckSession()
         tools = session.available_tools()
-        names = {"ffmpeg": "XWayland 截图", "xdotool": "XWayland 键鼠", "grim": "Wayland 截图", "wtype": "Wayland 键盘", "ydotool": "虚拟输入"}
+        names = {"ffmpeg": "XWayland 截图（备用）", "xdotool": "XWayland 键鼠", "grim": "Wayland 截图", "wtype": "Wayland 键盘", "ydotool": "虚拟输入", "portal-screenshot": "Gamescope 真实画面截图"}
         self._show(["Deck 环境诊断", "", *(f"{names.get(key, key)}：{'就绪' if value else '缺失'}" for key, value in tools.items()), "", "按任意键返回"])
         self.screen.getch()
 

@@ -135,6 +135,7 @@ def command_doctor(_: argparse.Namespace) -> int:
     print(f"XWayland input (xdotool): {'available' if tools['xdotool'] else 'not installed'}")
     print(f"Wayland screenshots (grim): {'available' if tools['grim'] else 'not installed'}")
     print(f"virtual input (ydotool): {'available' if tools['ydotool'] else 'not installed'}")
+    print(f"Gamescope screenshot portal: {'available' if DeckSession()._portal_helper() else 'not installed'}")
     return status
 
 

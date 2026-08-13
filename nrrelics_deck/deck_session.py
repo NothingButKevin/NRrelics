@@ -36,19 +36,35 @@ class DeckSession:
         return environment
 
     def available_tools(self) -> dict[str, bool]:
-        return {name: shutil.which(name) is not None for name in ("ffmpeg", "xdotool", "grim", "wtype", "ydotool")}
+        tools = {name: shutil.which(name) is not None for name in ("ffmpeg", "xdotool", "grim", "wtype", "ydotool")}
+        tools["portal-screenshot"] = self._portal_helper() is not None
+        return tools
+
+    def _portal_helper(self) -> Path | None:
+        helper = Path(__file__).resolve().parent.parent / "scripts" / "portal-screenshot.py"
+        return helper if helper.is_file() and Path("/usr/bin/python3").is_file() else None
 
     def require_automation_tools(self) -> None:
         tools = self.available_tools()
         missing = []
-        if not (tools["ffmpeg"] or tools["grim"]):
-            missing.append("ffmpeg or grim (screenshots)")
+        if not (tools["portal-screenshot"] or tools["ffmpeg"] or tools["grim"]):
+            missing.append("Gamescope portal, ffmpeg, or grim (screenshots)")
         if not (tools["xdotool"] or tools["ydotool"]):
             missing.append("xdotool or ydotool (keyboard and mouse input)")
         if missing:
             raise RuntimeError("Deck automation requires " + " and ".join(missing))
 
     def capture_bytes(self) -> bytes:
+        helper = self._portal_helper()
+        if helper:
+            result = self.runner(
+                ["/usr/bin/python3", str(helper)], check=True, capture_output=True, text=True, env=self._system_environment(), timeout=12
+            )
+            path = Path(result.stdout.strip())
+            try:
+                return path.read_bytes()
+            finally:
+                path.unlink(missing_ok=True)
         ffmpeg = shutil.which("ffmpeg")
         if ffmpeg:
             error = None
