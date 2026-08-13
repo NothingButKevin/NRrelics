@@ -33,12 +33,16 @@ class App:
             elif key == ord("4"):
                 self._repository("favorite", "normal")
             elif key == ord("5"):
-                self._presets("normal")
+                self._repository("sell", "deepnight")
             elif key == ord("6"):
-                self._presets("deepnight")
+                self._repository("favorite", "deepnight")
             elif key == ord("7"):
-                self._saves()
+                self._presets("normal")
             elif key == ord("8"):
+                self._presets("deepnight")
+            elif key == ord("9"):
+                self._saves()
+            elif key == ord("0"):
                 self._diagnostics()
 
     def _draw_home(self):
@@ -49,10 +53,12 @@ class App:
             "2  Shop: deepnight relics",
             "3  Repository: sell unmatched normal relics",
             "4  Repository: favorite matched normal relics",
-            "5  Normal presets",
-            "6  Deepnight presets and blacklist",
-            "7  Save backups",
-            "8  Diagnostics",
+            "5  Repository: sell unmatched deepnight relics",
+            "6  Repository: favorite matched deepnight relics",
+            "7  Normal presets",
+            "8  Deepnight presets and blacklist",
+            "9  Save backups",
+            "0  Diagnostics",
             "",
             "q / Esc  Exit",
             "",
@@ -97,9 +103,9 @@ class App:
         except Exception as exc:
             self.message = f"{title} failed: {exc}"
         finally:
-            self.screen.refresh()
             curses.reset_prog_mode()
             self.screen.keypad(True)
+            self.screen.refresh()
 
     def _presets(self, mode: str):
         store = PresetStore(self.app_root)

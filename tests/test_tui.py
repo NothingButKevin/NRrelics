@@ -22,3 +22,22 @@ class TuiTests(unittest.TestCase):
         self.assertFalse(app._confirm("Confirm", "SELL"))
         app._ask = lambda _label: "SELL"
         self.assertTrue(app._confirm("Confirm", "SELL"))
+
+    def test_home_dispatches_deepnight_repository(self):
+        app = object.__new__(tui.App)
+        app._cursor = lambda _visible: None
+        app._draw_home = lambda: None
+        app._repository = lambda action, mode: calls.append((action, mode))
+        calls = []
+
+        class Screen:
+            def keypad(self, _enabled):
+                pass
+
+            def getch(self):
+                return ord("5") if not calls else ord("q")
+
+        app.screen = Screen()
+        app.run()
+
+        self.assertEqual(calls, [("sell", "deepnight")])
