@@ -25,24 +25,34 @@ class DeckSession:
         uid = str(os.getuid())
         environment.setdefault("XDG_RUNTIME_DIR", f"/run/user/{uid}")
         environment.setdefault("WAYLAND_DISPLAY", "wayland-0")
+        environment.setdefault("DISPLAY", ":0")
         return environment
 
     def available_tools(self) -> dict[str, bool]:
-        return {name: shutil.which(name) is not None for name in ("grim", "wtype", "ydotool")}
+        return {name: shutil.which(name) is not None for name in ("ffmpeg", "xdotool", "grim", "wtype", "ydotool")}
 
     def require_automation_tools(self) -> None:
         tools = self.available_tools()
         missing = []
-        if not tools["grim"]:
-            missing.append("grim (screenshots)")
-        if not tools["ydotool"]:
-            missing.append("ydotool (keyboard and mouse input)")
+        if not (tools["ffmpeg"] or tools["grim"]):
+            missing.append("ffmpeg or grim (screenshots)")
+        if not (tools["xdotool"] or tools["ydotool"]):
+            missing.append("xdotool or ydotool (keyboard and mouse input)")
         if missing:
             raise RuntimeError("Deck automation requires " + " and ".join(missing))
 
     def capture_bytes(self) -> bytes:
+        if shutil.which("ffmpeg"):
+            result = self.runner(
+                ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"],
+                check=True,
+                capture_output=True,
+                env=self.environment(),
+            )
+            if result.stdout:
+                return result.stdout
         if not shutil.which("grim"):
-            raise RuntimeError("grim is required for screenshots; install it on the Deck first")
+            raise RuntimeError("ffmpeg X11 capture or grim is required for screenshots")
         result = self.runner(["grim", "-"], check=True, capture_output=True, env=self.environment())
         if not result.stdout:
             raise RuntimeError("grim returned an empty screenshot")
@@ -62,18 +72,24 @@ class DeckSession:
         return image
 
     def capture(self, destination: Path) -> Path:
-        if not shutil.which("grim"):
-            raise RuntimeError("grim is required for screenshots; install it on the Deck first")
         destination = destination.expanduser()
         destination.parent.mkdir(parents=True, exist_ok=True)
-        self.runner(["grim", str(destination)], check=True, text=True, capture_output=True, env=self.environment())
+        if shutil.which("ffmpeg"):
+            self.runner(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-y", str(destination)], check=True, text=True, capture_output=True, env=self.environment())
+        elif shutil.which("grim"):
+            self.runner(["grim", str(destination)], check=True, text=True, capture_output=True, env=self.environment())
+        else:
+            raise RuntimeError("ffmpeg X11 capture or grim is required for screenshots")
         if not destination.is_file():
-            raise RuntimeError("grim completed without creating a screenshot")
+            raise RuntimeError("screenshot backend completed without creating a screenshot")
         return destination
 
     def key(self, key: str) -> None:
         key = key.lower()
         tools = self.available_tools()
+        if tools["xdotool"]:
+            self.runner(["xdotool", "key", key], check=True, text=True, capture_output=True, env=self.environment())
+            return
         if tools["ydotool"]:
             code = _YDOTOOL_KEYS.get(key)
             if code is None:
@@ -86,11 +102,17 @@ class DeckSession:
         raise RuntimeError("an input backend is required: install wtype or ydotool on the Deck")
 
     def move_mouse(self, x: int, y: int) -> None:
+        if shutil.which("xdotool"):
+            self.runner(["xdotool", "mousemove", str(x), str(y)], check=True, text=True, capture_output=True, env=self.environment())
+            return
         if not shutil.which("ydotool"):
             raise RuntimeError("ydotool is required for mouse movement on the Deck")
         self.runner(["ydotool", "mousemove", "--absolute", "-x", str(x), "-y", str(y)], check=True, text=True, capture_output=True)
 
     def click(self) -> None:
+        if shutil.which("xdotool"):
+            self.runner(["xdotool", "click", "1"], check=True, text=True, capture_output=True, env=self.environment())
+            return
         if not shutil.which("ydotool"):
             raise RuntimeError("ydotool is required for mouse clicks on the Deck")
         self.runner(["ydotool", "click", "0xC0"], check=True, text=True, capture_output=True)
