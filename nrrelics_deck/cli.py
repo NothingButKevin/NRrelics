@@ -131,9 +131,9 @@ def command_doctor(_: argparse.Namespace) -> int:
     tools = session.available_tools()
     print(f"python: {sys.version.split()[0]}")
     print("interface: SSH CLI (no GUI required)")
-    print(f"OCR packages: {'available' if shutil.which('tesseract') else 'not installed'}")
-    print(f"screenshots (grim): {'available' if tools['grim'] else 'not installed'}")
-    print(f"Wayland input (wtype): {'available' if tools['wtype'] else 'not installed'}")
+    print(f"XWayland screenshots (ffmpeg): {'available' if tools['ffmpeg'] else 'not installed'}")
+    print(f"XWayland input (xdotool): {'available' if tools['xdotool'] else 'not installed'}")
+    print(f"Wayland screenshots (grim): {'available' if tools['grim'] else 'not installed'}")
     print(f"virtual input (ydotool): {'available' if tools['ydotool'] else 'not installed'}")
     return status
 

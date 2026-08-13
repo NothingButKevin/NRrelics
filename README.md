@@ -74,7 +74,7 @@ nrrelics repo sell normal --count 100 --yes
 
 `nrrelics shell` accepts the same commands without repeating `nrrelics`; use `exit` when finished.
 
-`screen` writes a screenshot from the currently visible Deck session. `input` sends one named key to the current focused window through `wtype` or `ydotool`; it does not create a window or move focus. The automatic shop/repository loops require `grim` and `ydotool`, because the original code also uses mouse movement. Run `nrrelics doctor` first to see which Deck-side helper is available.
+`screen` writes a screenshot from the currently visible Deck session. `input` sends one named key to the current focused window through `xdotool` or `ydotool`; it does not create a window or move focus. Steam Deck's game mode uses the existing `ffmpeg + xdotool` XWayland path; `grim + ydotool` is a fallback. Run `nrrelics doctor` first to see which helper is available.
 
 ## Save Location
 
