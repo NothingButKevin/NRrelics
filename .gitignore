@@ -4,7 +4,7 @@ debug/
 data/save_backups/
 CLAUDE.md
 logs/
-*.json
+nrrelics_deck.egg-info/
 *.backup
 
 # --- Python 核心 ---

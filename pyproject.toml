@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nrrelics-deck"
+version = "0.1.0"
+description = "Steam Deck command-line companion for Nightreign relic saves and presets"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "NothingButKevin"}]
+dependencies = []
+
+[project.optional-dependencies]
+ocr = ["rapidocr>=3.0", "onnxruntime>=1.16", "opencv-python>=4.5", "numpy>=1.21"]
+
+[project.scripts]
+nrrelics = "nrrelics_deck.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["nrrelics_deck*"]

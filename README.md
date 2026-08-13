@@ -1,110 +1,93 @@
-# NRrelic Bot
+# NRrelics Deck CLI
 
-一款用于《艾尔登法环：黑夜君临》（Elden Ring Nightreign）的遗物自动化管理工具。<br>
-本软件不涉及任何游戏内数据修改，本质上不进行作弊以及任何违反游戏规则的行为。
+An SSH-first Steam Deck port of [NRrelics](https://github.com/limbic07/NRrelics) for *Elden Ring Nightreign*.
 
-## ！！注意！！
--强烈建议仓库清理前利用本软件备份存档<br>
--请保持游戏界面作为焦点使用<br>
--游戏分辨率会影响OCR准确度，建议在16：9固定比例，720p以上分辨率使用<br>
+This fork deliberately has no desktop window. Run it from a Mac terminal after connecting to the Deck with SSH. It manages Nightreign saves and the same `presets.json` schema used by the upstream tool, so existing preset rules can be reused without conversion.
 
-## 功能概览
+## What Works
 
-### 商店筛选
-- 自动在小壶商人处购买遗物（支持十连购买）
-- OCR识别遗物词条，根据预设自动筛选
-- 支持普通遗物和深夜遗物两种模式
-- 支持新旧两个版本遗物切换
-- 可设置暗痕停止阈值,低于阈值自动停止购买
-- 双有效/三有效匹配模式切换
+- Detects the SteamOS Proton save location for Nightreign (`2622380`)
+- Lists, creates, and restores local save backups; restore makes a safety copy first
+- Creates and edits general/dedicated normal or Deepnight preset rules
+- Maintains Deepnight blacklist rules
+- Searches the bundled Chinese affix vocabulary
+- Runs entirely through an SSH terminal; no Deck desktop window, mouse, or keyboard is required
 
-### 仓库清理
-- 自动遍历遗物仪式仓库中的遗物
-- 图像识别遗物状态（自由/已装备/已收藏/官方遗物）
-- OCR识别词条，根据预设自动筛选
-- 两种清理模式：售出模式 / 收藏模式
-- 支持自动检测遗物数量或手动设置上限
-- 双有效/三有效匹配模式切换
+The original one-click shop and repository loops are not included yet: the upstream implementation depends on Windows-only input and window APIs. This CLI already provides the Deck-side primitives those loops need: `screen` captures the visible game session and `input` sends an explicit key to its focused window. `nrrelics doctor` reports whether the required Deck helpers are present.
 
-### 存档管理
-- 自动检测Steam用户
-- 存档备份与恢复
-- 支持多个备份槽位管理
+## Install On Deck
 
-### 预设管理
-- 通用预设：适用于所有遗物的词条白名单
-- 专用预设：针对特定build的词条组合（最多20套）
-- 黑名单预设：深夜模式下排除负面词条
-- 词条库支持模糊匹配
+From the cloned repository on the Deck:
 
-
-## 使用说明
-
-### 商店筛选
-1. 配置词条预设（白名单/黑名单）
-2. 选择游戏模式（普通/深夜）和遗物版本
-3. 设置停止条件（暗痕数量或合格遗物目标）
-4. 打开游戏商人界面
-5. 点击"开始筛选"后回到游戏界面
-
-### 仓库清理
-1. 配置词条预设
-2. 选择游戏模式（普通/深夜）和清理模式（售出/收藏）
-3. 设置最大检测数量或自动检测仓库总数量
-4. 打开游戏遗物仪式界面
-5. 点击"开始清理"后回到游戏界面
-
-### 存档管理
-1. 设置Steam安装路径
-2. 选择Steam用户
-3. 创建备份 / 恢复备份
-
-## 词条匹配规则
-
-### 合格判定
-1. 单正面词条 → 自动判定不合格
-2. 黑名单词条匹配 → 不合格（仅深夜模式）
-3. 白名单匹配：
-   - 双有效模式：2条正面词条匹配 → 合格
-   - 三有效模式：3条正面词条匹配 → 合格
-
-### 预设优先级
-通用预设 + 任一专用预设的组合匹配
-
-## 技术特性
-
-- **OCR引擎**：RapidOCR，支持中文识别
-- **UI框架**：PySide6 + PySide6-Fluent-Widgets
-- **图像处理**：OpenCV（模板匹配、边缘检测）
-- **自动化**：pydirectinput / pyautogui
-
-## 目录结构
-
-```
-NRrelics/
-├── main.py              # 程序入口
-├── core/                # 核心逻辑
-│   ├── ocr_engine.py    # OCR引擎
-│   ├── relic_detector.py # 遗物状态检测
-│   ├── automation.py    # 仓库自动化
-│   ├── shop_automation.py # 商店自动化
-│   ├── repo_cleaner.py  # 仓库清理逻辑
-│   ├── preset_manager.py # 预设管理
-│   └── save_manager.py  # 存档管理
-├── ui/                  # 用户界面
-│   ├── main_window.py   # 主窗口
-│   ├── pages/           # 功能页面
-│   ├── dialogs/         # 对话框
-│   └── components/      # UI组件
-├── data/                # 数据资源
-│   ├── normal.txt       # 普通模式词条库
-│   ├── deepnight_pos.txt # 深夜模式正面词条库
-│   └── deepnight_neg.txt # 深夜模式负面词条库
-└── requirements.txt     # 依赖列表
+```bash
+chmod +x scripts/install-deck.sh
+./scripts/install-deck.sh
 ```
 
-## 注意事项
-- 匹配规则为与 “通用预设 + 任一专用预设的组合” 匹配
-- 仓库清理前强烈建议备份存档防止误删
-- 用户数据（预设、设置、备份）保存在程序同级 `data/` 目录
+The installer only copies this repository into `~/Applications/NRrelics-Deck-CLI` and creates `~/.local/bin/nrrelics`. It does not modify SteamOS or install system packages.
 
+Reconnect with SSH, then run:
+
+```bash
+nrrelics status
+nrrelics saves backup --name before-relic-cleanup
+nrrelics shell
+```
+
+If `~/.local/bin` is not in the SSH session's `PATH`, run `~/Applications/NRrelics-Deck-CLI/nrrelics.py` instead.
+
+## Commands
+
+```bash
+# Detect the real SteamOS Proton path and current save
+nrrelics status
+nrrelics doctor
+nrrelics screen
+nrrelics input f
+
+# Back up, inspect, and restore a save
+nrrelics saves list
+nrrelics saves backup --name before-shopping
+nrrelics saves restore before-shopping --yes
+
+# Search the Chinese affix vocabulary, then add it to the normal general preset
+nrrelics presets normal search 攻击
+nrrelics presets normal add "攻击力提升"
+nrrelics presets normal list
+
+# Create a dedicated build preset and add a rule to it
+nrrelics presets normal create Tank
+nrrelics presets normal add "生命力提升" --preset PASTE_THE_PRINTED_ID
+nrrelics presets normal disable PASTE_THE_PRINTED_ID
+
+# Manage Deepnight exclusions
+nrrelics presets deepnight blacklist-add "受到伤害增加"
+nrrelics presets deepnight blacklist-list
+```
+
+`nrrelics shell` accepts the same commands without repeating `nrrelics`; use `exit` when finished.
+
+`screen` writes a screenshot from the currently visible Deck session. `input` sends one named key to the current focused window through `wtype` or `ydotool`; it does not create a window or move focus. Run `nrrelics doctor` first to see which Deck-side helper is available.
+
+## Save Location
+
+On Steam Deck, the detected path is:
+
+```text
+~/.local/share/Steam/steamapps/compatdata/2622380/pfx/drive_c/users/steamuser/AppData/Roaming/Nightreign/<SteamID64>/NR0000.sl2
+```
+
+The CLI's own data is stored under `~/.local/share/nrrelics-deck/`. Set `NRRELICS_STEAM_ROOT` or `NRRELICS_DATA_DIR` only when testing or using a nonstandard Steam installation.
+
+## Development
+
+The default CLI requires only Python 3.10+. Run its checks with:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 -m compileall nrrelics_deck
+```
+
+## License
+
+This fork retains the upstream MIT license. See [LICENSE](LICENSE).
