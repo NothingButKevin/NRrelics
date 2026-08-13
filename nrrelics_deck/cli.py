@@ -170,6 +170,13 @@ def command_repository(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_tui(_: argparse.Namespace) -> int:
+    from .tui import run
+
+    run(APP_ROOT)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="nrrelics", description="Nightreign relic and save tools for SSH into Steam Deck")
     parser.add_argument("--version", action="version", version=__version__)
@@ -199,6 +206,8 @@ def build_parser() -> argparse.ArgumentParser:
     repository.add_argument("--allow-favorited", action="store_true", help="allow original loop to un-favorite relics when needed")
     repository.add_argument("--yes", action="store_true", help="required for sale confirmation")
     repository.set_defaults(handler=command_repository)
+    tui = commands.add_parser("tui", help="open the interactive SSH terminal interface")
+    tui.set_defaults(handler=command_tui)
     saves = commands.add_parser("saves", help="list, back up, or restore saves")
     saves.add_argument("--user", help="SteamID64; defaults to the first detected user")
     saves_sub = saves.add_subparsers(dest="action", required=True)
@@ -265,8 +274,8 @@ class DeckShell(cmd.Cmd):
     do_quit = do_exit
 
     def do_help(self, _: str):
-        print("Commands: status, doctor, screen [PATH], input KEY, shop ..., repo ..., saves ..., presets ..., exit")
-        print("Examples: shop normal --stop-currency 5000 | repo sell normal --count 100 --yes")
+        print("Commands: tui, status, doctor, screen [PATH], input KEY, shop ..., repo ..., saves ..., presets ..., exit")
+        print("Examples: tui | shop normal --stop-currency 5000 | repo sell normal --count 100 --yes")
 
 
 def main(argv: list[str] | None = None) -> int:
