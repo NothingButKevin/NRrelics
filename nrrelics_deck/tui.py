@@ -6,6 +6,7 @@ import curses
 from datetime import datetime
 from queue import Empty, Queue
 from threading import Thread
+from time import monotonic
 
 from .paths import detect_steam_root, discover_users
 from .presets import PresetStore
@@ -115,6 +116,7 @@ class App:
         worker.start()
         visible_logs = []
         stopping = False
+        started = monotonic()
         self.screen.nodelay(True)
         try:
             while worker.is_alive():
@@ -139,7 +141,7 @@ class App:
                         visible_logs.append("已请求停止，等待当前操作结束…")
                     else:
                         visible_logs.append("正在初始化，停止请求将尽快生效…")
-                self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping)
+                self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping, elapsed=int(monotonic() - started))
                 curses.napms(80)
         finally:
             self.screen.nodelay(False)
@@ -152,10 +154,10 @@ class App:
                     visible_logs.append(entry)
         except Empty:
             pass
-        self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping, finished=True)
+        self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping, finished=True, elapsed=int(monotonic() - started))
         self.screen.getch()
 
-    def _draw_log_view(self, title, kind, mode, number, matches, logs, stopping, finished=False):
+    def _draw_log_view(self, title, kind, mode, number, matches, logs, stopping, finished=False, elapsed=0):
         self.screen.erase()
         self._title(f"运行中：{title}" if not finished else f"完成：{title}")
         lines, columns = self.screen.getmaxyx()
@@ -168,7 +170,8 @@ class App:
         side = width + 3
         settings = ["任务信息", "", f"模式：{'深夜' if mode == 'deepnight' else '普通'}", f"有效词条：{matches} 条"]
         settings.append(f"{'暗痕下限' if kind == 'shop' else '处理数量'}：{number}")
-        settings += ["", "状态：" + ("正在停止…" if stopping else "运行中" if not finished else "已结束"), "", "q / Esc / Ctrl-C", "请求停止" if not finished else "按任意键返回"]
+        state = "正在停止…" if stopping else "运行中" if not finished else "已结束"
+        settings += ["", f"状态：{state}", f"运行时间：{elapsed} 秒", "", "q / Esc / Ctrl-C", "请求停止" if not finished else "按任意键返回"]
         for row, line in enumerate(settings, 3):
             if row < lines - 1:
                 self.screen.addnstr(row, side, line, max(1, columns - side - 2))
