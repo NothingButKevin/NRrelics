@@ -52,3 +52,10 @@ class DeckSessionTests(unittest.TestCase):
             self.assertEqual(session.capture_bytes(), b"png")
 
         self.assertEqual(len(calls), 2)
+
+    def test_ffmpeg_does_not_inherit_opencv_library_path(self):
+        session = DeckSession()
+        with patch.dict("nrrelics_deck.deck_session.os.environ", {"LD_LIBRARY_PATH": "/opencv/lib"}, clear=True):
+            environment = session._system_environment()
+
+        self.assertNotIn("LD_LIBRARY_PATH", environment)

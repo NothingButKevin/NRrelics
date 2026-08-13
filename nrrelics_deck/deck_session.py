@@ -29,6 +29,12 @@ class DeckSession:
         environment.setdefault("DISPLAY", ":0")
         return environment
 
+    def _system_environment(self) -> dict[str, str]:
+        """Run system tools outside OpenCV's dynamically injected library path."""
+        environment = self.environment()
+        environment.pop("LD_LIBRARY_PATH", None)
+        return environment
+
     def available_tools(self) -> dict[str, bool]:
         return {name: shutil.which(name) is not None for name in ("ffmpeg", "xdotool", "grim", "wtype", "ydotool")}
 
@@ -52,7 +58,7 @@ class DeckSession:
                         [ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"],
                         check=True,
                         capture_output=True,
-                        env=self.environment(),
+                        env=self._system_environment(),
                     )
                     if result.stdout:
                         return result.stdout
@@ -85,7 +91,7 @@ class DeckSession:
         destination = destination.expanduser()
         destination.parent.mkdir(parents=True, exist_ok=True)
         if shutil.which("ffmpeg"):
-            self.runner(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-y", str(destination)], check=True, text=True, capture_output=True, env=self.environment())
+            self.runner(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-y", str(destination)], check=True, text=True, capture_output=True, env=self._system_environment())
         elif shutil.which("grim"):
             self.runner(["grim", str(destination)], check=True, text=True, capture_output=True, env=self.environment())
         else:
