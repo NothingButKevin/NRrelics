@@ -1,4 +1,5 @@
 import unittest
+import subprocess
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -36,3 +37,18 @@ class DeckSessionTests(unittest.TestCase):
             session.move_mouse(100, 200)
 
         self.assertEqual(calls[0][0][0], ["xdotool", "mousemove", "100", "200"])
+
+    def test_capture_retries_transient_ffmpeg_failure(self):
+        calls = []
+
+        def runner(*args, **kwargs):
+            calls.append((args, kwargs))
+            if len(calls) == 1:
+                raise subprocess.CalledProcessError(127, ["ffmpeg"], stderr=b"temporary X11 error")
+            return type("Result", (), {"stdout": b"png"})()
+
+        session = DeckSession(runner=runner)
+        with patch("nrrelics_deck.deck_session.shutil.which", side_effect=lambda tool: "/usr/bin/ffmpeg" if tool == "ffmpeg" else None), patch("nrrelics_deck.deck_session.time.sleep"):
+            self.assertEqual(session.capture_bytes(), b"png")
+
+        self.assertEqual(len(calls), 2)

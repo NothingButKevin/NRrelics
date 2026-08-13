@@ -9,6 +9,7 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Callable
 
@@ -42,15 +43,24 @@ class DeckSession:
             raise RuntimeError("Deck automation requires " + " and ".join(missing))
 
     def capture_bytes(self) -> bytes:
-        if shutil.which("ffmpeg"):
-            result = self.runner(
-                ["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"],
-                check=True,
-                capture_output=True,
-                env=self.environment(),
-            )
-            if result.stdout:
-                return result.stdout
+        ffmpeg = shutil.which("ffmpeg")
+        if ffmpeg:
+            error = None
+            for _ in range(3):
+                try:
+                    result = self.runner(
+                        [ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "x11grab", "-video_size", "1280x800", "-i", self.environment()["DISPLAY"], "-frames:v", "1", "-f", "image2pipe", "-vcodec", "png", "-"],
+                        check=True,
+                        capture_output=True,
+                        env=self.environment(),
+                    )
+                    if result.stdout:
+                        return result.stdout
+                except subprocess.CalledProcessError as exc:
+                    error = exc
+                    time.sleep(0.15)
+            detail = error.stderr.decode(errors="replace").strip() if error and error.stderr else "no output"
+            raise RuntimeError(f"XWayland screenshot failed after 3 attempts: {detail}") from error
         if not shutil.which("grim"):
             raise RuntimeError("ffmpeg X11 capture or grim is required for screenshots")
         result = self.runner(["grim", "-"], check=True, capture_output=True, env=self.environment())

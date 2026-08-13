@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+
 from .deck_session import DeckSession
 from .upstream_adapter import install
 
@@ -9,6 +11,12 @@ from .upstream_adapter import install
 def _dependencies(session: DeckSession):
     session.require_automation_tools()
     install(session)
+    # RapidOCR installs a console handler which bypasses the TUI's log queue.
+    # Keep the library quiet; original NRrelics workflow messages use callbacks.
+    rapidocr_logger = logging.getLogger("RapidOCR")
+    rapidocr_logger.handlers.clear()
+    rapidocr_logger.addHandler(logging.NullHandler())
+    rapidocr_logger.propagate = False
     from core import OCREngine
     from core.automation import RepositoryFilter
     from core.preset_manager import PresetManager
