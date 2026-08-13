@@ -24,3 +24,15 @@ class DeckSessionTests(unittest.TestCase):
         with TemporaryDirectory() as directory, patch("nrrelics_deck.deck_session.shutil.which", return_value=None):
             with self.assertRaisesRegex(RuntimeError, "grim"):
                 session.capture(Path(directory) / "screen.png")
+
+    def test_mouse_uses_ydotool_absolute_coordinates(self):
+        calls = []
+
+        def runner(*args, **kwargs):
+            calls.append((args, kwargs))
+
+        session = DeckSession(runner=runner)
+        with patch("nrrelics_deck.deck_session.shutil.which", side_effect=lambda tool: "/bin/" + tool if tool == "ydotool" else None):
+            session.move_mouse(100, 200)
+
+        self.assertEqual(calls[0][0][0], ["ydotool", "mousemove", "--absolute", "-x", "100", "-y", "200"])

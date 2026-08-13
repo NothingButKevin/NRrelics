@@ -152,6 +152,24 @@ def command_input(args: argparse.Namespace) -> int:
     return 0
 
 
+def command_shop(args: argparse.Namespace) -> int:
+    from .upstream_runner import run_shop
+
+    print("starting original shop automation: keep Nightreign focused; Ctrl-C stops immediately")
+    run_shop(args.mode, args.version, args.stop_currency, args.matches == 2)
+    return 0
+
+
+def command_repository(args: argparse.Namespace) -> int:
+    if args.action == "sell" and not args.yes:
+        raise RuntimeError("repository sell marks and confirms sales. Re-run with --yes when the first relic is selected.")
+    from .upstream_runner import run_repository
+
+    print("starting original repository automation: keep Nightreign focused at the relic ritual screen; Ctrl-C stops immediately")
+    run_repository(args.mode, args.action, args.count, args.matches == 2, args.allow_favorited)
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="nrrelics", description="Nightreign relic and save tools for SSH into Steam Deck")
     parser.add_argument("--version", action="version", version=__version__)
@@ -164,9 +182,23 @@ def build_parser() -> argparse.ArgumentParser:
     screen.add_argument("output", nargs="?", default="~/Pictures/nrrelics-screen.png")
     screen.set_defaults(handler=command_screen)
     input_command = commands.add_parser("input", help="send one key to the current focused Deck window")
-    input_command.add_argument("key", choices=("f", "m", "0", "1", "2", "3", "4", "5", "left", "right", "up", "down", "enter", "escape"))
+    input_command.add_argument("key", choices=("f", "f1", "f2", "m", "q", "0", "1", "2", "3", "4", "5", "left", "right", "up", "down", "enter", "escape"))
     input_command.add_argument("--repeat", type=int, default=1, choices=range(1, 101), metavar="1..100")
     input_command.set_defaults(handler=command_input)
+    shop = commands.add_parser("shop", help="run the original automated merchant purchase and filtering loop")
+    shop.add_argument("mode", choices=("normal", "deepnight"))
+    shop.add_argument("--version", choices=("new", "old"), default="new")
+    shop.add_argument("--stop-currency", type=int, default=0, help="stop when currency drops below this value; 0 disables it")
+    shop.add_argument("--matches", type=int, default=2, choices=(2, 3), help="positive affixes required to keep a relic")
+    shop.set_defaults(handler=command_shop)
+    repository = commands.add_parser("repo", help="automatically sell or favorite selected repository relics")
+    repository.add_argument("action", choices=("sell", "favorite"))
+    repository.add_argument("mode", choices=("normal", "deepnight"))
+    repository.add_argument("--count", type=int, required=True, choices=range(1, 1001), metavar="1..1000")
+    repository.add_argument("--matches", type=int, default=2, choices=(2, 3), help="positive affixes required to keep a relic")
+    repository.add_argument("--allow-favorited", action="store_true", help="allow original loop to un-favorite relics when needed")
+    repository.add_argument("--yes", action="store_true", help="required for sale confirmation")
+    repository.set_defaults(handler=command_repository)
     saves = commands.add_parser("saves", help="list, back up, or restore saves")
     saves.add_argument("--user", help="SteamID64; defaults to the first detected user")
     saves_sub = saves.add_subparsers(dest="action", required=True)
@@ -233,8 +265,8 @@ class DeckShell(cmd.Cmd):
     do_quit = do_exit
 
     def do_help(self, _: str):
-        print("Commands: status, doctor, screen [PATH], input KEY, saves ..., presets ..., exit")
-        print("Examples: saves backup --name before-cleanup | presets normal list")
+        print("Commands: status, doctor, screen [PATH], input KEY, shop ..., repo ..., saves ..., presets ..., exit")
+        print("Examples: shop normal --stop-currency 5000 | repo sell normal --count 100 --yes")
 
 
 def main(argv: list[str] | None = None) -> int:

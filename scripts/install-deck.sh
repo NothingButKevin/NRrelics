@@ -17,5 +17,9 @@ if [[ "$SOURCE_DIR" != "$INSTALL_DIR" ]]; then
     cp -a "$SOURCE_DIR" "$INSTALL_DIR"
 fi
 
-ln -sfn "$INSTALL_DIR/nrrelics.py" "$BIN_DIR/nrrelics"
-printf 'Installed. Reconnect over SSH, then run: nrrelics status\n'
+python3 -m venv "$INSTALL_DIR/.venv"
+"$INSTALL_DIR/.venv/bin/pip" install --upgrade pip
+"$INSTALL_DIR/.venv/bin/pip" install -e "$INSTALL_DIR[deck]"
+printf '#!/usr/bin/env bash\nexec "%s/.venv/bin/nrrelics" "$@"\n' "$INSTALL_DIR" > "$BIN_DIR/nrrelics"
+chmod +x "$BIN_DIR/nrrelics"
+printf 'Installed. Reconnect over SSH, then run: nrrelics doctor\n'

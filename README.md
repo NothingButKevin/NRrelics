@@ -13,7 +13,7 @@ This fork deliberately has no desktop window. Run it from a Mac terminal after c
 - Searches the bundled Chinese affix vocabulary
 - Runs entirely through an SSH terminal; no Deck desktop window, mouse, or keyboard is required
 
-The original one-click shop and repository loops are not included yet: the upstream implementation depends on Windows-only input and window APIs. This CLI already provides the Deck-side primitives those loops need: `screen` captures the visible game session and `input` sends an explicit key to its focused window. `nrrelics doctor` reports whether the required Deck helpers are present.
+The original OCR, vocabulary correction, shop loop, and repository loop are retained. The Deck CLI swaps only their Windows capture/input/window dependencies for SteamOS-compatible adapters, then launches the unchanged original loops from SSH.
 
 ## Install On Deck
 
@@ -22,6 +22,7 @@ From the cloned repository on the Deck:
 ```bash
 chmod +x scripts/install-deck.sh
 ./scripts/install-deck.sh
+cd ~/Applications/NRrelics-Deck-CLI
 ```
 
 The installer only copies this repository into `~/Applications/NRrelics-Deck-CLI` and creates `~/.local/bin/nrrelics`. It does not modify SteamOS or install system packages.
@@ -63,11 +64,17 @@ nrrelics presets normal disable PASTE_THE_PRINTED_ID
 # Manage Deepnight exclusions
 nrrelics presets deepnight blacklist-add "受到伤害增加"
 nrrelics presets deepnight blacklist-list
+
+# Run the original automatic purchase/filter loop from SSH
+nrrelics shop normal --stop-currency 5000
+
+# Run the original automatic repository sell loop from SSH
+nrrelics repo sell normal --count 100 --yes
 ```
 
 `nrrelics shell` accepts the same commands without repeating `nrrelics`; use `exit` when finished.
 
-`screen` writes a screenshot from the currently visible Deck session. `input` sends one named key to the current focused window through `wtype` or `ydotool`; it does not create a window or move focus. Run `nrrelics doctor` first to see which Deck-side helper is available.
+`screen` writes a screenshot from the currently visible Deck session. `input` sends one named key to the current focused window through `wtype` or `ydotool`; it does not create a window or move focus. The automatic shop/repository loops require `grim` and `ydotool`, because the original code also uses mouse movement. Run `nrrelics doctor` first to see which Deck-side helper is available.
 
 ## Save Location
 
