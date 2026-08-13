@@ -20,19 +20,23 @@ def _dependencies(session: DeckSession):
     return ocr, presets, repository_filter, RelicDetector()
 
 
-def run_shop(mode: str, version: str, stop_currency: int, double: bool) -> None:
+def run_shop(mode: str, version: str, stop_currency: int, double: bool, log_callback=print, controller_callback=None) -> None:
     session = DeckSession()
     ocr, presets, repository_filter, _ = _dependencies(session)
     from core.shop_automation import ShopAutomation
 
     controller = ShopAutomation(ocr, presets, repository_filter, {})
-    controller.start_shopping(mode, version, stop_currency, double, log_callback=lambda message, _level="INFO": print(message, flush=True))
+    if controller_callback:
+        controller_callback(controller)
+    controller.start_shopping(mode, version, stop_currency, double, log_callback=lambda message, _level="INFO": log_callback(message))
 
 
-def run_repository(mode: str, action: str, count: int, double: bool, allow_favorited: bool) -> None:
+def run_repository(mode: str, action: str, count: int, double: bool, allow_favorited: bool, log_callback=print, controller_callback=None) -> None:
     session = DeckSession()
     ocr, presets, _, detector = _dependencies(session)
     from core.repo_cleaner import RepoCleaner
 
     controller = RepoCleaner(presets, ocr, detector, {})
-    controller.start_cleaning(mode, action, count, allow_favorited, double, log_callback=lambda message, _level="INFO": print(message, flush=True))
+    if controller_callback:
+        controller_callback(controller)
+    controller.start_cleaning(mode, action, count, allow_favorited, double, log_callback=lambda message, _level="INFO": log_callback(message))

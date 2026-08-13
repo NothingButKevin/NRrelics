@@ -41,3 +41,33 @@ class TuiTests(unittest.TestCase):
         app.run()
 
         self.assertEqual(calls, [("sell", "deepnight")])
+
+    def test_log_view_keeps_status_in_a_separate_panel(self):
+        calls = []
+
+        class Screen:
+            def erase(self):
+                calls.append("erase")
+
+            def vline(self, *_args):
+                calls.append("vline")
+
+            def addstr(self, *_args):
+                calls.append("addstr")
+
+            def addnstr(self, *_args):
+                calls.append("addnstr")
+
+            def refresh(self):
+                calls.append("refresh")
+
+            def getmaxyx(self):
+                return (30, 100)
+
+        app = object.__new__(tui.App)
+        app.screen = Screen()
+        app._title = lambda _text: calls.append("title")
+        app._draw_log_view("商店", "shop", "normal", 5000, 2, ["第一条日志"], False)
+
+        self.assertIn("vline", calls)
+        self.assertIn("refresh", calls)

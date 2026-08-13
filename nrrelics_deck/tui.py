@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import curses
 from datetime import datetime
+from queue import Empty, Queue
+from threading import Thread
 
 from .paths import detect_steam_root, discover_users
 from .presets import PresetStore
@@ -91,24 +93,86 @@ class App:
         self._run_automation(f"{relic_type}{verb}", "repo", mode, count, matches, action)
 
     def _run_automation(self, title, kind, mode, number, matches, action=None):
-        self._show([f"正在启动{title}。", "按 Ctrl-C 可立即停止。", "", "正在加载原版 OCR 与自动化循环..."])
-        curses.def_prog_mode()
-        curses.endwin()
-        try:
+        logs = Queue()
+        controller = []
+
+        def write_log(message):
+            logs.put(str(message))
+
+        def work():
+            write_log(f"正在加载原版 OCR 与自动化循环：{title}")
             from .upstream_runner import run_repository, run_shop
-            if kind == "shop":
-                run_shop(mode, "new", number, matches == 2)
-            else:
-                run_repository(mode, action, number, matches == 2, False)
-            self.message = f"{title}已完成。"
-        except KeyboardInterrupt:
-            self.message = f"{title}已停止。"
-        except Exception as exc:
-            self.message = f"{title}失败：{exc}"
+            try:
+                if kind == "shop":
+                    run_shop(mode, "new", number, matches == 2, write_log, controller.append)
+                else:
+                    run_repository(mode, action, number, matches == 2, False, write_log, controller.append)
+                logs.put(("done", f"{title}已完成。"))
+            except Exception as exc:
+                logs.put(("done", f"{title}失败：{exc}"))
+
+        worker = Thread(target=work, daemon=True)
+        worker.start()
+        visible_logs = []
+        stopping = False
+        self.screen.nodelay(True)
+        try:
+            while worker.is_alive():
+                try:
+                    while True:
+                        entry = logs.get_nowait()
+                        if isinstance(entry, tuple):
+                            self.message = entry[1]
+                        else:
+                            visible_logs.append(entry)
+                except Empty:
+                    pass
+                key = self.screen.getch()
+                if key in (ord("q"), 27, 3) and not stopping:
+                    stopping = True
+                    if controller:
+                        target = controller[0]
+                        if kind == "shop":
+                            target.stop()
+                        else:
+                            target.stop_cleaning()
+                        visible_logs.append("已请求停止，等待当前操作结束…")
+                    else:
+                        visible_logs.append("正在初始化，停止请求将尽快生效…")
+                self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping)
+                curses.napms(80)
         finally:
-            curses.reset_prog_mode()
-            self.screen.keypad(True)
-            self.screen.refresh()
+            self.screen.nodelay(False)
+        try:
+            while True:
+                entry = logs.get_nowait()
+                if isinstance(entry, tuple):
+                    self.message = entry[1]
+                else:
+                    visible_logs.append(entry)
+        except Empty:
+            pass
+        self._draw_log_view(title, kind, mode, number, matches, visible_logs, stopping, finished=True)
+        self.screen.getch()
+
+    def _draw_log_view(self, title, kind, mode, number, matches, logs, stopping, finished=False):
+        self.screen.erase()
+        self._title(f"运行中：{title}" if not finished else f"完成：{title}")
+        lines, columns = self.screen.getmaxyx()
+        width = max(28, columns * 2 // 3)
+        self.screen.vline(2, width, "|", max(1, lines - 3))
+        self.screen.addstr(2, 2, "运行日志", curses.A_BOLD)
+        start = max(0, len(logs) - max(1, lines - 5))
+        for row, line in enumerate(logs[start:], 3):
+            self.screen.addnstr(row, 2, line, max(1, width - 4))
+        side = width + 3
+        settings = ["任务信息", "", f"模式：{'深夜' if mode == 'deepnight' else '普通'}", f"有效词条：{matches} 条"]
+        settings.append(f"{'暗痕下限' if kind == 'shop' else '处理数量'}：{number}")
+        settings += ["", "状态：" + ("正在停止…" if stopping else "运行中" if not finished else "已结束"), "", "q / Esc / Ctrl-C", "请求停止" if not finished else "按任意键返回"]
+        for row, line in enumerate(settings, 3):
+            if row < lines - 1:
+                self.screen.addnstr(row, side, line, max(1, columns - side - 2))
+        self.screen.refresh()
 
     def _presets(self, mode: str):
         store = PresetStore(self.app_root)
@@ -230,14 +294,16 @@ class App:
         self.screen.refresh()
 
     def _title(self, text):
+        _, columns = self.screen.getmaxyx()
         self.screen.addstr(0, 2, text, curses.A_BOLD)
-        self.screen.hline(1, 0, "-", max(1, curses.COLS - 1))
+        self.screen.hline(1, 0, "-", max(1, columns - 1))
 
     def _lines(self, lines, row):
+        rows, columns = self.screen.getmaxyx()
         for line in lines:
-            if row >= curses.LINES - 1:
+            if row >= rows - 1:
                 break
-            self.screen.addnstr(row, 2, str(line), max(1, curses.COLS - 4))
+            self.screen.addnstr(row, 2, str(line), max(1, columns - 4))
             row += 1
 
     @staticmethod
