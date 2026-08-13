@@ -37,6 +37,12 @@ nrrelics shell
 
 If `~/.local/bin` is not in the SSH session's `PATH`, run `~/Applications/NRrelics-Deck-CLI/nrrelics.py` instead.
 
+For the existing Deck offline OCR setup, run the included wrapper instead. It reuses `~/Mods/NRrelics-Deck/py312` and its already-downloaded OCR models:
+
+```bash
+~/Mods/NRrelics-Deck-CLI/scripts/run-deck-cli.sh doctor
+```
+
 ## Commands
 
 ```bash
