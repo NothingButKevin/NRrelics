@@ -31,6 +31,9 @@ def install(session: DeckSession) -> None:
     keyboard.add_hotkey = lambda *args, **kwargs: None
     keyboard.remove_hotkey = lambda *args, **kwargs: None
     pygetwindow = ModuleType("pygetwindow")
+    # The unchanged upstream annotations reference this Windows-only class
+    # while importing the automation module.
+    pygetwindow.Win32Window = _Window
     pygetwindow.getAllWindows = lambda: [window]
     win32gui = ModuleType("win32gui")
     win32gui.FindWindow = lambda *args: 1

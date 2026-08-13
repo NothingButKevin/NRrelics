@@ -33,6 +33,7 @@ class UpstreamAdapterTests(unittest.TestCase):
             import win32gui
 
             self.assertEqual(pygetwindow.getAllWindows()[0].width, 1280)
+            self.assertIs(pygetwindow.Win32Window, type(pygetwindow.getAllWindows()[0]))
             self.assertEqual(win32gui.GetClientRect(1), (0, 0, 1280, 720))
             self.assertTrue(callable(pyautogui.screenshot))
             self.assertTrue(callable(pydirectinput.press))
