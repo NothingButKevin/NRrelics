@@ -14,7 +14,7 @@ class App:
     def __init__(self, screen, app_root):
         self.screen = screen
         self.app_root = app_root
-        self.message = "Ready. Keep Nightreign focused before starting automation."
+        self.message = "就绪。启动自动化前请保持黑夜君临在前台。"
 
     def run(self):
         self._cursor(False)
@@ -47,48 +47,51 @@ class App:
 
     def _draw_home(self):
         self.screen.erase()
-        self._title("NRrelics Deck  |  SSH Terminal Control")
+        self._title("NRrelics Deck  |  SSH 终端控制")
         self._lines([
-            "1  Shop: normal relics",
-            "2  Shop: deepnight relics",
-            "3  Repository: sell unmatched normal relics",
-            "4  Repository: favorite matched normal relics",
-            "5  Repository: sell unmatched deepnight relics",
-            "6  Repository: favorite matched deepnight relics",
-            "7  Normal presets",
-            "8  Deepnight presets and blacklist",
-            "9  Save backups",
-            "0  Diagnostics",
+            "1  商店：普通遗物自动筛选",
+            "2  商店：深夜遗物自动筛选",
+            "3  仓库：出售不合格普通遗物",
+            "4  仓库：收藏合格普通遗物",
+            "5  仓库：出售不合格深夜遗物",
+            "6  仓库：收藏合格深夜遗物",
+            "7  普通遗物预设",
+            "8  深夜预设与黑名单",
+            "9  存档备份与恢复",
+            "0  环境诊断",
             "",
-            "q / Esc  Exit",
+            "q / Esc  退出",
             "",
             self.message,
         ], 3)
         self.screen.refresh()
 
     def _shop(self, mode: str):
-        currency = self._ask_int("Stop when currency is below (0 = never)", 5000, minimum=0)
+        currency = self._ask_int("暗痕低于多少时停止（0 = 不限制）", 5000, minimum=0)
         if currency is None:
             return
-        matches = self._ask_int("Required good affixes (2 or 3)", 2, minimum=2, maximum=3)
+        matches = self._ask_int("需要几条有效词条（2 或 3）", 2, minimum=2, maximum=3)
         if matches is None:
             return
-        self._run_automation(f"Shop {mode}", "shop", mode, currency, matches)
+        title = "普通遗物商店筛选" if mode == "normal" else "深夜遗物商店筛选"
+        self._run_automation(title, "shop", mode, currency, matches)
 
     def _repository(self, action: str, mode: str):
-        count = self._ask_int("How many relics to process", 20, minimum=1, maximum=1000)
+        count = self._ask_int("处理多少个遗物", 20, minimum=1, maximum=1000)
         if count is None:
             return
-        matches = self._ask_int("Required good affixes (2 or 3)", 2, minimum=2, maximum=3)
+        matches = self._ask_int("需要几条有效词条（2 或 3）", 2, minimum=2, maximum=3)
         if matches is None:
             return
-        if action == "sell" and not self._confirm("This will confirm selling unmatched relics. Continue?", "SELL"):
-            self.message = "Sale cancelled."
+        if action == "sell" and not self._confirm("这会确认出售不合格遗物。继续吗？", "出售"):
+            self.message = "已取消出售。"
             return
-        self._run_automation(f"Repository {action}", "repo", mode, count, matches, action)
+        relic_type = "普通遗物" if mode == "normal" else "深夜遗物"
+        verb = "出售" if action == "sell" else "收藏"
+        self._run_automation(f"{relic_type}{verb}", "repo", mode, count, matches, action)
 
     def _run_automation(self, title, kind, mode, number, matches, action=None):
-        self._show([f"{title} is starting.", "Press Ctrl-C in this SSH terminal to stop.", "", "Loading original OCR and automation loop..."])
+        self._show([f"正在启动{title}。", "按 Ctrl-C 可立即停止。", "", "正在加载原版 OCR 与自动化循环..."])
         curses.def_prog_mode()
         curses.endwin()
         try:
@@ -97,11 +100,11 @@ class App:
                 run_shop(mode, "new", number, matches == 2)
             else:
                 run_repository(mode, action, number, matches == 2, False)
-            self.message = f"{title} completed."
+            self.message = f"{title}已完成。"
         except KeyboardInterrupt:
-            self.message = f"{title} stopped."
+            self.message = f"{title}已停止。"
         except Exception as exc:
-            self.message = f"{title} failed: {exc}"
+            self.message = f"{title}失败：{exc}"
         finally:
             curses.reset_prog_mode()
             self.screen.keypad(True)
@@ -111,25 +114,25 @@ class App:
         store = PresetStore(self.app_root)
         while True:
             presets = store.list_presets(mode)
-            lines = [f"{mode.title()} presets", ""]
+            lines = [("普通遗物预设" if mode == "normal" else "深夜遗物预设"), ""]
             for index, preset in enumerate(presets, 1):
-                state = "on" if preset.get("is_active", True) else "off"
-                lines.append(f"{index}. {preset['name']} [{state}] - {len(preset['affixes'])} affixes")
-            lines += ["", "a Add affix to general preset", "r Remove affix from general preset", "v View general affixes", "b Deepnight blacklist" if mode == "deepnight" else "", "Esc Back"]
+                state = "启用" if preset.get("is_active", True) else "停用"
+                lines.append(f"{index}. {preset['name']} [{state}] - {len(preset['affixes'])} 条词条")
+            lines += ["", "a 添加到通用预设", "r 从通用预设删除", "v 查看通用预设", "b 深夜黑名单" if mode == "deepnight" else "", "Esc 返回"]
             self._show(lines)
             key = self.screen.getch()
             if key in (27, ord("q")):
                 return
             if key == ord("a"):
-                affix = self._ask("Affix text")
+                affix = self._ask("输入词条")
                 if affix:
-                    self.message = "Affix added." if store.add_affix(mode, affix) else "Affix is already present."
+                    self.message = "词条已添加。" if store.add_affix(mode, affix) else "词条已存在。"
             elif key == ord("r"):
-                affix = self._ask("Affix text to remove")
+                affix = self._ask("输入要删除的词条")
                 if affix:
-                    self.message = "Affix removed." if store.remove_affix(mode, affix) else "Affix was not present."
+                    self.message = "词条已删除。" if store.remove_affix(mode, affix) else "词条不在预设中。"
             elif key == ord("v"):
-                self._show(["General preset", "", *store.get_general(mode)["affixes"], "", "Any key to return"])
+                self._show(["通用预设", "", *store.get_general(mode)["affixes"], "", "按任意键返回"])
                 self.screen.getch()
             elif mode == "deepnight" and key == ord("b"):
                 self._blacklist(store)
@@ -137,16 +140,16 @@ class App:
     def _blacklist(self, store):
         while True:
             values = store.blacklist()["affixes"]
-            self._show(["Deepnight blacklist", "", *values, "", "a Add  r Remove  Esc Back"])
+            self._show(["深夜黑名单", "", *values, "", "a 添加  r 删除  Esc 返回"])
             key = self.screen.getch()
             if key in (27, ord("q")):
                 return
             if key == ord("a"):
-                value = self._ask("Affix to reject")
+                value = self._ask("输入要排除的词条")
                 if value:
                     store.add_blacklist_affix(value)
             elif key == ord("r"):
-                value = self._ask("Affix to remove")
+                value = self._ask("输入要删除的词条")
                 if value:
                     store.remove_blacklist_affix(value)
 
@@ -154,41 +157,42 @@ class App:
         steam_root = detect_steam_root()
         users = discover_users(steam_root) if steam_root else []
         if not users:
-            self.message = "No Nightreign save found."
+            self.message = "未找到黑夜君临存档。"
             return
         user = users[0]
         store = SaveStore()
         while True:
             backups = store.list_backups(user.steam_id)
-            lines = ["Save backups", f"Active: {user.save_path.name}", "", "b Create backup"]
-            lines += [f"{index}. Restore {backup.stem}" for index, backup in enumerate(backups, 1)]
-            lines += ["", "Esc Back"]
+            lines = ["存档备份", f"当前存档：{user.save_path.name}", "", "b 创建备份"]
+            lines += [f"{index}. 恢复 {backup.stem}" for index, backup in enumerate(backups, 1)]
+            lines += ["", "Esc 返回"]
             self._show(lines)
             key = self.screen.getch()
             if key in (27, ord("q")):
                 return
             if key == ord("b"):
-                name = self._ask("Backup name", datetime.now().strftime("backup-%Y%m%d-%H%M"))
+                name = self._ask("备份名称", datetime.now().strftime("backup-%Y%m%d-%H%M"))
                 if name:
                     try:
                         store.backup(user, name)
-                        self.message = "Backup created."
+                        self.message = "备份已创建。"
                     except Exception as exc:
-                        self.message = f"Backup failed: {exc}"
+                        self.message = f"备份失败：{exc}"
             elif ord("1") <= key <= ord("9"):
                 index = key - ord("1")
-                if index < len(backups) and self._confirm(f"Restore {backups[index].stem}?", "RESTORE"):
+                if index < len(backups) and self._confirm(f"恢复 {backups[index].stem}？", "恢复"):
                     try:
                         store.restore(user, backups[index])
-                        self.message = "Save restored."
+                        self.message = "存档已恢复。"
                     except Exception as exc:
-                        self.message = f"Restore failed: {exc}"
+                        self.message = f"恢复失败：{exc}"
 
     def _diagnostics(self):
         from .deck_session import DeckSession
         session = DeckSession()
         tools = session.available_tools()
-        self._show(["Deck diagnostics", "", *(f"{key}: {'ready' if value else 'missing'}" for key, value in tools.items()), "", "Any key to return"])
+        names = {"ffmpeg": "XWayland 截图", "xdotool": "XWayland 键鼠", "grim": "Wayland 截图", "wtype": "Wayland 键盘", "ydotool": "虚拟输入"}
+        self._show(["Deck 环境诊断", "", *(f"{names.get(key, key)}：{'就绪' if value else '缺失'}" for key, value in tools.items()), "", "按任意键返回"])
         self.screen.getch()
 
     def _ask(self, label: str, default: str = "") -> str | None:
@@ -196,7 +200,7 @@ class App:
         self._cursor(True)
         self.screen.erase()
         self._title(label)
-        self.screen.addstr(3, 2, f"Default: {default}")
+        self.screen.addstr(3, 2, f"默认值：{default}")
         self.screen.addstr(5, 2, "> ")
         self.screen.refresh()
         value = self.screen.getstr(5, 4).decode(errors="replace").strip()
@@ -212,7 +216,7 @@ class App:
                 raise ValueError
             return parsed
         except (TypeError, ValueError):
-            self.message = "Invalid value."
+            self.message = "输入无效。"
             return None
 
     def _confirm(self, message: str, token: str) -> bool:
